@@ -2,6 +2,12 @@
 name = "grep_bin"
 version = "0.1.0"
 edition = "2018"
+authors = ["LaBatata101 <labatata101@linuxmail.org>"]
+readme = "README.md"
+license-file = "LICENSE"
+repository = "https://github.com/LaBatata101/grep_bin"
+keywords = ["binary", "grep", "search", "pattern", "bgrep"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 clap = "2.33.3"
