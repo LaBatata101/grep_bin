@@ -50,9 +50,10 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
         files.push(file.to_string());
     }
 
-    for file in files {
-        println!("{}:", file);
-        let mut reader = match File::open(file) {
+    let bytes_to_search = hex::decode(pattern).unwrap_or_else(|_| {
+        eprintln!("Wrong format!");
+        process::exit(1);
+    });
             Ok(file) => BufReader::new(file),
             Err(err) => {
                 eprintln!("Error: {}", err);
