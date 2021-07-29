@@ -69,8 +69,13 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
             .read_to_end(&mut buffer)
             .expect("Failed reading file to buffer!");
 
-        let result = search_subslice(&buffer, &[0xFF, 0xFE]);
-        print_hexdump(result, &buffer);
+        let result = search_subslice(&buffer, &bytes_to_search);
+
+        if !result.is_empty() {
+            println!("{}", filename);
+            print_hexdump(result, &buffer);
+            println!();
+        }
     }
 }
 
@@ -92,7 +97,6 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8]) {
             std::io::stdout().flush().unwrap();
 
             if i == 15 {
-
                 print!("  |");
                 print_ascii_representation(&src[offset..(offset + padding)]);
                 print!("|");
