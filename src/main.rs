@@ -8,25 +8,40 @@ fn main() {
     let app = App::new("grep_bin")
         .version("0.1.0")
         .arg(
-            Arg::with_name("file")
+            Arg::with_name("filepath")
                 .short("f")
+                .required(true)
                 .multiple(true)
-                .long("file")
                 .takes_value(true)
-                .help("The file path."),
+                .empty_values(false)
+                .help("The file path"),
         )
         .arg(
             Arg::with_name("recursive")
                 .short("r")
-                .help("Search recursivly in the file path."),
+                .help("Search recursivly in the file path"),
         )
-        .arg(Arg::with_name("search").short("s").takes_value(true))
+        .arg(
+            Arg::with_name("search")
+                .short("s")
+                .requires("filepath")
+                .max_values(1)
+                .required(true)
+                .takes_value(true)
+                .empty_values(false)
+                .long_help(
+                    "The sequence of bytes to be searched in file.
+Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
+                ),
+        )
         .settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::ColoredHelp]);
 
     let matches = app.get_matches();
 
+    let pattern = matches.value_of("search").unwrap();
+
     let mut files = Vec::new();
-    for file in matches.values_of("file").unwrap() {
+    for file in matches.values_of("filepath").unwrap() {
         let filepath = Path::new(file);
 
         if filepath.is_dir() {
