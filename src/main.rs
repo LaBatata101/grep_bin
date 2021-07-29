@@ -46,8 +46,9 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
 
         if filepath.is_dir() {
             files.extend(get_all_files_from_path(filepath));
+        } else {
+            files.push(file.to_string());
         }
-        files.push(file.to_string());
     }
 
     let bytes_to_search = hex::decode(pattern).unwrap_or_else(|_| {
