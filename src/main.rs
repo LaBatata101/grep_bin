@@ -54,6 +54,9 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
         eprintln!("Wrong format!");
         process::exit(1);
     });
+
+    for filename in files {
+        let mut reader = match File::open(&filename) {
             Ok(file) => BufReader::new(file),
             Err(err) => {
                 eprintln!("Error: {}", err);
