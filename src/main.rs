@@ -6,7 +6,7 @@ use std::process;
 
 fn main() {
     let app = App::new("grep_bin")
-        .version("0.1.0")
+        .version(clap::crate_version!())
         .arg(
             Arg::with_name("filepath")
                 .short("f")
