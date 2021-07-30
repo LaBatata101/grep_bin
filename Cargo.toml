@@ -12,3 +12,4 @@ categories = ["command-line-utilities"]
 [dependencies]
 clap = "2.33.3"
 hex = "0.4.3"
+ansi_term = "0.12.1"
