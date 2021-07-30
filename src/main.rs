@@ -89,6 +89,7 @@ fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
 
 fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
     let padding = 16; // 16 bytes per row
+    let src_len = src.len();
 
     for index in indexes {
         let offset = index - (index % padding);
@@ -97,8 +98,9 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
         print!("{}:  ", Colour::Green.paint(format!("{:08X}", offset)));
 
         for (i, pos) in (offset..(offset + padding)).enumerate() {
-            // Print the matching bytes colored
-            if indexes_to_paint.contains(&pos) {
+            if pos >= src_len { // avoid index out of bounds
+                print!("   ");
+            } else if indexes_to_paint.contains(&pos) { // Print the matching bytes colored
                 print!("{} ", Colour::Red.bold().paint(format!("{:02X}", src[pos])));
             } else {
                 print!("{:02X} ", src[pos]);
@@ -111,9 +113,13 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
             std::io::stdout().flush().unwrap();
 
             if i == 15 {
+                let mut upper_bound = offset + padding;
+                if upper_bound > src_len { // avoid index out of bounds
+                    upper_bound = upper_bound - (upper_bound - src_len);
+                }
                 print!(
                     "  |{}|",
-                    ascii_representation(&src[offset..(offset + padding)])
+                    ascii_representation(&src[offset..upper_bound])
                 );
                 std::io::stdout().flush().unwrap();
 
