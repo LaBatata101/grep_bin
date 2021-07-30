@@ -112,10 +112,10 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
             std::io::stdout().flush().unwrap();
 
             if i == 15 {
-                print!("  |");
-                print_ascii_representation(&src[offset..(offset + padding)]);
-                print!("|");
-
+                print!(
+                    "  |{}|",
+                    ascii_representation(&src[offset..(offset + padding)])
+                );
                 std::io::stdout().flush().unwrap();
 
                 println!();
@@ -124,38 +124,53 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
     }
 }
 
-fn print_ascii_representation(chars: &[u8]) {
+fn ascii_representation(chars: &[u8]) -> String {
+    let mut output = String::new();
+
     for &c in chars {
         let ch = c as char;
 
         if ch.is_ascii() && !ch.is_ascii_control() {
-            print!("{}", ch);
+            output.push(ch);
         } else {
-            print!(".");
+            output.push('.');
         }
-
-        std::io::stdout().flush().unwrap();
     }
+
+    output
 }
 
-fn get_all_files_from_path(path: &Path) -> Vec<String> {
-    let mut filepaths: Vec<String> = Vec::new();
+fn get_all_files_from_path(paths: Vec<&str>) -> Vec<PathBuf> {
+    let mut files = Vec::new();
 
-    visit_dirs(path, &mut |file| {
-        filepaths.push(file.to_str().unwrap_or_default().to_string())
-    })
-    .unwrap();
+    for path in paths {
+        let filepath = PathBuf::from(path);
+
+        if filepath.is_dir() {
+            files.extend(get_all_files_from_dir(filepath));
+        } else {
+            files.push(filepath);
+        }
+    }
+
+    files
+}
+
+fn get_all_files_from_dir(dir: PathBuf) -> Vec<PathBuf> {
+    let mut filepaths: Vec<PathBuf> = Vec::new();
+
+    visit_dirs(dir, &mut |file| filepaths.push(file)).unwrap();
 
     filepaths
 }
 
-fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(PathBuf)) -> std::io::Result<()> {
+fn visit_dirs(dir: PathBuf, cb: &mut dyn FnMut(PathBuf)) -> std::io::Result<()> {
     if dir.is_dir() {
         for entry in std::fs::read_dir(dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.is_dir() {
-                visit_dirs(&path, cb)?;
+                visit_dirs(path, cb)?;
             } else {
                 cb(entry.path());
             }
