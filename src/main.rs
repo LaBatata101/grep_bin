@@ -1,3 +1,4 @@
+use ansi_term::Colour;
 use clap::{App, AppSettings, Arg};
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
@@ -74,26 +75,35 @@ fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
             .read_to_end(&mut buffer)
             .expect("Failed reading file to buffer!");
 
-        let result = search_subslice(&buffer, &bytes_to_search);
+        let result = search_subslice(&buffer, pattern);
 
         if !result.is_empty() {
-            println!("{}", filename);
-            print_hexdump(result, &buffer);
+            println!("{}", Colour::Purple.paint(filename.to_str().unwrap()));
+            print_hexdump(result, &buffer, pattern.len());
             println!();
         }
     }
 }
 
-fn print_hexdump(indexes: Vec<usize>, src: &[u8]) {
+fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
     let padding = 16; // 16 bytes per row
 
     for index in indexes {
         let offset = index - (index % padding);
+        let indexes_to_paint = index..index + pattern_size;
 
-        print!("{:08X}  ", offset);
+        print!("{}:  ", Colour::Green.paint(format!("{:08X}", offset)));
 
         for (i, pos) in (offset..(offset + padding)).enumerate() {
-            print!("{:02X} ", src[pos as usize]);
+            // Print the matching bytes colored
+            if indexes_to_paint.contains(&pos) {
+                print!(
+                    "{} ",
+                    Colour::Red.bold().paint(format!("{:02X}", src[pos]))
+                );
+            } else {
+                print!("{:02X} ", src[pos]);
+            }
 
             if i == 7 {
                 print!(" ");
