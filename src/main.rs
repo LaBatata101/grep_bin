@@ -45,10 +45,13 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
     let pattern = matches.value_of("search").unwrap();
     let filetypes: Vec<&str> = matches.values_of("filetype").unwrap_or_default().collect();
 
-    let bytes_to_search = hex::decode(pattern).unwrap_or_else(|_| {
-        eprintln!("Wrong format!");
-        process::exit(1);
-    });
+    let bytes_to_search = match hex::decode(pattern) {
+        Ok(hex) => hex,
+        Err(err) => {
+            eprintln!("Error: {} in byte sequence!", err);
+            process::exit(1);
+        }
+    };
 
     let filepaths = matches.values_of("filepath").unwrap().collect();
     let files: Vec<PathBuf> = if filetypes.is_empty() {
@@ -65,7 +68,7 @@ fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
         let mut file = match File::open(&filename) {
             Ok(file) => file,
             Err(err) => {
-                eprintln!("Error: {}", err);
+                eprintln!("{}: {}", filename.to_str().unwrap(), err);
                 process::exit(1);
             }
         };
