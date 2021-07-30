@@ -17,9 +17,12 @@ fn main() {
                 .help("The file path"),
         )
         .arg(
-            Arg::with_name("recursive")
-                .short("r")
-                .help("Search recursivly in the file path"),
+            Arg::with_name("filetype")
+                .short("t")
+                .multiple(true)
+                .takes_value(true)
+                .empty_values(false)
+                .help("Filter the file types."),
         )
         .arg(
             Arg::with_name("search")
@@ -39,23 +42,24 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
     let matches = app.get_matches();
 
     let pattern = matches.value_of("search").unwrap();
-
-    let mut files = Vec::new();
-    for file in matches.values_of("filepath").unwrap() {
-        let filepath = Path::new(file);
-
-        if filepath.is_dir() {
-            files.extend(get_all_files_from_path(filepath));
-        } else {
-            files.push(file.to_string());
-        }
-    }
+    let filetypes: Vec<&str> = matches.values_of("filetype").unwrap_or_default().collect();
 
     let bytes_to_search = hex::decode(pattern).unwrap_or_else(|_| {
         eprintln!("Wrong format!");
         process::exit(1);
     });
 
+    let filepaths = matches.values_of("filepath").unwrap().collect();
+    let files: Vec<PathBuf> = if filetypes.is_empty() {
+        get_all_files_from_path(filepaths)
+    } else {
+        filter_filetypes(get_all_files_from_path(filepaths), &filetypes)
+    };
+
+    search_in_files(&bytes_to_search, &files);
+}
+
+fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
     for filename in files {
         let mut reader = match File::open(&filename) {
             Ok(file) => BufReader::new(file),
@@ -148,6 +152,21 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(PathBuf)) -> std::io::Result<()> {
         }
     }
     Ok(())
+}
+
+fn filter_filetypes(files: Vec<PathBuf>, filetypes: &[&str]) -> Vec<PathBuf> {
+    files
+        .into_iter()
+        .filter(|path| {
+            filetypes.contains(
+                &path
+                    .extension()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap_or_default(),
+            )
+        })
+        .collect()
 }
 
 fn search_subslice(input: &[u8], pattern: &[u8]) -> Vec<usize> {
