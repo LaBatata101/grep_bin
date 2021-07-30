@@ -1,8 +1,8 @@
 use ansi_term::Colour;
 use clap::{App, AppSettings, Arg};
 use std::fs::File;
-use std::io::{BufReader, Read, Write};
-use std::path::{Path, PathBuf};
+use std::io::{Read, Write};
+use std::path::{PathBuf};
 use std::process;
 
 fn main() {
@@ -62,8 +62,8 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
 
 fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
     for filename in files {
-        let mut reader = match File::open(&filename) {
-            Ok(file) => BufReader::new(file),
+        let mut file = match File::open(&filename) {
+            Ok(file) => file,
             Err(err) => {
                 eprintln!("Error: {}", err);
                 process::exit(1);
@@ -71,8 +71,7 @@ fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
         };
 
         let mut buffer = Vec::new();
-        reader
-            .read_to_end(&mut buffer)
+        file.read_to_end(&mut buffer)
             .expect("Failed reading file to buffer!");
 
         let result = search_subslice(&buffer, pattern);
@@ -97,10 +96,7 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
         for (i, pos) in (offset..(offset + padding)).enumerate() {
             // Print the matching bytes colored
             if indexes_to_paint.contains(&pos) {
-                print!(
-                    "{} ",
-                    Colour::Red.bold().paint(format!("{:02X}", src[pos]))
-                );
+                print!("{} ", Colour::Red.bold().paint(format!("{:02X}", src[pos])));
             } else {
                 print!("{:02X} ", src[pos]);
             }
