@@ -2,7 +2,7 @@ use ansi_term::Colour;
 use clap::{App, AppSettings, Arg};
 use std::fs::File;
 use std::io::{Read, Write};
-use std::path::{PathBuf};
+use std::path::PathBuf;
 use std::process;
 
 fn main() {
@@ -23,7 +23,7 @@ fn main() {
                 .multiple(true)
                 .takes_value(true)
                 .empty_values(false)
-                .help("Filter the file types."),
+                .help("Filter the search by filetypes."),
         )
         .arg(
             Arg::with_name("search")

@@ -26,7 +26,7 @@ FLAGS:
 
 OPTIONS:
     -f <filepath>...        The file path
-    -t <filetype>...        Filter the file types.
+    -t <filetype>...        Filter the search by filetypes.
     -s <search>             The sequence of bytes to be searched in file.
                             Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.
 ```
