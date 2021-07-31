@@ -31,15 +31,16 @@ If a directory is provided grep_bin will search every file in the directory recu
 Examples of input: jpg, mp3, exe"),
         )
         .arg(
-            Arg::with_name("search")
-                .short("s")
+            Arg::with_name("bytes")
+                .short("b")
                 .requires("filepath")
+                .required_unless("string")
                 .max_values(1)
                 .required(true)
                 .takes_value(true)
                 .empty_values(false)
                 .long_help(
-                    "The sequence of bytes to be searched in file.
+                    "The sequence of bytes to be searched in the file.
 Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
                 ),
         )
