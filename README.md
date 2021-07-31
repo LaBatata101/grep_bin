@@ -30,3 +30,10 @@ OPTIONS:
     -s <search>             The sequence of bytes to be searched in file.
                             Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.
 ```
+
+# Building Manually
+`$ git clone https://github.com/LaBatata101/grep_bin`
+
+`$ cd grep_bin/`
+
+`$ cargo build --release`
