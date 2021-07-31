@@ -8,6 +8,10 @@ use std::process;
 fn main() {
     let app = App::new("grep_bin")
         .version(clap::crate_version!())
+        .long_about(
+            "Searches for a sequence of bytes  or a ASCII string in a binary file.
+If a directory is provided grep_bin will search every file in the directory recursively.",
+        )
         .arg(
             Arg::with_name("filepath")
                 .short("f")
