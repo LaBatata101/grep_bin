@@ -27,7 +27,8 @@ If a directory is provided grep_bin will search every file in the directory recu
                 .multiple(true)
                 .takes_value(true)
                 .empty_values(false)
-                .help("Filter the search by filetypes."),
+                .long_help("Filter the search by the file extensions.
+Examples of input: jpg, mp3, exe"),
         )
         .arg(
             Arg::with_name("search")
