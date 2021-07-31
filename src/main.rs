@@ -44,20 +44,21 @@ Examples of input: jpg, mp3, exe"),
 Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
                 ),
         )
+        .arg(
+            Arg::with_name("string")
+                .short("s")
+                .requires("filepath")
+                .required_unless("bytes")
+                .takes_value(true)
+                .max_values(1)
+                .empty_values(false)
+                .help("Search for ASCII string inside the file"),
+        )
         .settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::ColoredHelp]);
 
     let matches = app.get_matches();
 
-    let pattern = matches.value_of("search").unwrap();
     let filetypes: Vec<&str> = matches.values_of("filetype").unwrap_or_default().collect();
-
-    let bytes_to_search = match hex::decode(pattern) {
-        Ok(hex) => hex,
-        Err(err) => {
-            eprintln!("Error: {} in byte sequence!", err);
-            process::exit(1);
-        }
-    };
 
     let filepaths = matches.values_of("filepath").unwrap().collect();
     let files: Vec<PathBuf> = if filetypes.is_empty() {
@@ -66,7 +67,45 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
         filter_filetypes(get_all_files_from_path(filepaths), &filetypes)
     };
 
-    search_in_files(&bytes_to_search, &files);
+    if matches.is_present("string") {
+        let string_to_search = matches.value_of("string").unwrap();
+
+        let bytes_to_search =
+            match string_to_bytes(&string_to_search.chars().collect::<Vec<char>>()) {
+                Ok(bytes) => bytes,
+                Err(err) => {
+                    eprintln!("Error: {}", err);
+                    process::exit(1);
+                }
+            };
+        search_in_files(&bytes_to_search, &files);
+    }
+
+    if matches.is_present("bytes") {
+        let pattern = matches.value_of("bytes").unwrap();
+
+        let bytes_to_search = match hex::decode(pattern) {
+            Ok(hex) => hex,
+            Err(err) => {
+                eprintln!("Error: {} in byte sequence!", err);
+                process::exit(1);
+            }
+        };
+        search_in_files(&bytes_to_search, &files);
+    }
+}
+
+fn string_to_bytes(str: &[char]) -> Result<Vec<u8>, String> {
+    let mut bytes = Vec::new();
+    for c in str {
+        if c.is_ascii() {
+            bytes.push(*c as u8);
+        } else {
+            return Err(format!("Invalid ASCII character \"{}\"!", c));
+        }
+    }
+
+    Ok(bytes)
 }
 
 fn search_in_files(pattern: &[u8], files: &[PathBuf]) {
@@ -123,10 +162,7 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
                 if upper_bound > src_len { // avoid index out of bounds
                     upper_bound = upper_bound - (upper_bound - src_len);
                 }
-                print!(
-                    "  |{}|",
-                    ascii_representation(&src[offset..upper_bound])
-                );
+                print!("  |{}|", ascii_representation(&src[offset..upper_bound]));
                 std::io::stdout().flush().unwrap();
 
                 println!();
