@@ -2,6 +2,7 @@ use ansi_term::Colour;
 use clap::{App, AppSettings, Arg};
 use std::fs::File;
 use std::io::{Read, Write};
+use std::ops::Range;
 use std::path::PathBuf;
 use std::process;
 
@@ -162,8 +163,8 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
                 if upper_bound > src_len { // avoid index out of bounds
                     upper_bound = upper_bound - (upper_bound - src_len);
                 }
-                print!("  |{}|", ascii_representation(&src[offset..upper_bound]));
-                std::io::stdout().flush().unwrap();
+
+                print_ascii_representation(src, offset..upper_bound, &indexes_to_paint);
 
                 println!();
             }
@@ -171,20 +172,34 @@ fn print_hexdump(indexes: Vec<usize>, src: &[u8], pattern_size: usize) {
     }
 }
 
-fn ascii_representation(chars: &[u8]) -> String {
-    let mut output = String::new();
+fn print_ascii_representation(
+    bytes: &[u8],
+    indexes_to_print: Range<usize>,
+    indexes_to_paint: &Range<usize>,
+) {
+    print!("  |");
+    for i in indexes_to_print {
+        let ch = ascii_representation(bytes[i]);
 
-    for &c in chars {
-        let ch = c as char;
-
-        if ch.is_ascii() && !ch.is_ascii_control() {
-            output.push(ch);
+        if indexes_to_paint.contains(&i) {
+            print!("{}", Colour::Red.bold().paint(format!("{}", ch)));
         } else {
-            output.push('.');
+            print!("{}", ch);
         }
     }
+    print!("|");
 
-    output
+    std::io::stdout().flush().unwrap();
+}
+
+fn ascii_representation(byte: u8) -> char {
+    let ch = byte as char;
+
+    if ch.is_ascii() && !ch.is_ascii_control() {
+        ch
+    } else {
+        '.'
+    }
 }
 
 fn get_all_files_from_path(paths: Vec<&str>) -> Vec<PathBuf> {
