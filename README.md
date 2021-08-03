@@ -18,7 +18,7 @@ Search a sequence of bytes in a binary file
 ```
 $ grep_bin -h
 
-grep_bin 0.1.0
+grep_bin 1.0.0
 Searches for a sequence of bytes  or a ASCII string in a binary file.
 If a directory is provided grep_bin will search every file in the directory recursively.
 
