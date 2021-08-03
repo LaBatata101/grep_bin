@@ -44,3 +44,6 @@ OPTIONS:
 `$ cd grep_bin/`
 
 `$ cargo build --release`
+
+# Installing with Cargo
+`cargo install grep_bin`
