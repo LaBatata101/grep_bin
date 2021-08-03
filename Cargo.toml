@@ -3,6 +3,7 @@ name = "grep_bin"
 version = "0.1.0"
 edition = "2018"
 authors = ["LaBatata101 <labatata101@linuxmail.org>"]
+description = "Searches for a sequence of bytes  or a ASCII string in a binary file."
 readme = "README.md"
 license-file = "LICENSE"
 homepage = "https://github.com/LaBatata101/grep_bin"
