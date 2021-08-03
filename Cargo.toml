@@ -5,6 +5,7 @@ edition = "2018"
 authors = ["LaBatata101 <labatata101@linuxmail.org>"]
 readme = "README.md"
 license-file = "LICENSE"
+homepage = "https://github.com/LaBatata101/grep_bin"
 repository = "https://github.com/LaBatata101/grep_bin"
 keywords = ["binary", "grep", "search", "pattern", "bgrep"]
 categories = ["command-line-utilities"]
