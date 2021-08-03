@@ -11,6 +11,7 @@ fn main() {
 fn setup_args<'a>() -> ArgMatches<'a> {
     App::new("grep_bin")
         .version(clap::crate_version!())
+        .author(clap::crate_authors!())
         .long_about(
             "Searches for a sequence of bytes  or a ASCII string in a binary file.
 If a directory is provided grep_bin will search every file in the directory recursively.",
