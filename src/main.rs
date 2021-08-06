@@ -1,4 +1,4 @@
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches, values_t};
 use grep_bin::{search, util};
 use std::path::PathBuf;
 use std::process;
@@ -67,7 +67,7 @@ Example of valid inputs: f9b4ca, F9B4CA and f9B4Ca are all valid.",
 fn parse_args(args: ArgMatches) {
     let filetypes: Vec<&str> = args.values_of("filetype").unwrap_or_default().collect();
 
-    let filepaths = args.values_of("filepath").unwrap().collect();
+    let filepaths = values_t!(args, "filepath", PathBuf).unwrap();
     let files: Vec<PathBuf> = if filetypes.is_empty() {
         util::get_all_files_from_paths(filepaths)
     } else {

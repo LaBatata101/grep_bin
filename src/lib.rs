@@ -62,16 +62,15 @@ pub mod util {
         }
     }
 
-    pub fn get_all_files_from_paths(paths: Vec<&str>) -> Vec<PathBuf> {
+    pub fn get_all_files_from_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
         let mut files = Vec::new();
 
         for path in paths {
-            let filepath = PathBuf::from(path);
 
-            if filepath.is_dir() {
-                files.extend(get_all_files_from_dir(filepath));
+            if path.is_dir() {
+                files.extend(get_all_files_from_dir(path));
             } else {
-                files.push(filepath);
+                files.push(path);
             }
         }
 
