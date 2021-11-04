@@ -1,7 +1,7 @@
 [package]
 name = "grep_bin"
 version = "1.0.1"
-edition = "2018"
+edition = "2021"
 authors = ["LaBatata101 <labatata101@linuxmail.org>"]
 description = "Searches for a sequence of bytes  or a ASCII string in a binary file."
 readme = "README.md"
