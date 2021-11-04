@@ -11,7 +11,6 @@ pub use utils::{file, search};
 
 use crate::utils::{print_output, PatternType};
 
-
 pub fn setup_args<'a>() -> ArgMatches<'a> {
     App::new("grep_bin")
         .version(clap::crate_version!())
@@ -32,7 +31,12 @@ If a directory is provided grep_bin will search every file in the directory recu
             Arg::with_name("PATTERN")
                 .index(2)
                 .required(true)
-                .empty_values(false),
+                .empty_values(false)
+                .long_help(
+                    "Can be a ascii string or a byte sequence.
+Ascii strings should be passed inside quotes like so \"This is a string\"
+All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca",
+                ),
         )
         .arg(
             Arg::with_name("filetype")
