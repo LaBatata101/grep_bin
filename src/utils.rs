@@ -38,7 +38,7 @@ pub fn print_output(matching_indexes: Vec<Match>) {
             "{}:  {}\t\t\t{}",
             colored_offset,
             hex_bytes,
-            std::str::from_utf8(_match.data()).unwrap()
+            _match.data().iter().map(|&c| c as char).collect::<String>()
         );
 
         std::io::stdout().flush().unwrap();
