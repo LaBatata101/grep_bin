@@ -21,7 +21,7 @@
 ```
 $ grep_bin -h
 
-grep_bin 1.0.1
+grep_bin 1.0.2
 LaBatata101 <labatata101@linuxmail.org>
 Searches for a sequence of bytes  or a ASCII string in a binary file.
 If a directory is provided grep_bin will search every file in the directory recursively.

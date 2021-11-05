@@ -1,6 +1,6 @@
 [package]
 name = "grep_bin"
-version = "1.0.1"
+version = "1.0.2"
 edition = "2021"
 authors = ["LaBatata101 <labatata101@linuxmail.org>"]
 description = "Searches for a sequence of bytes  or a ASCII string in a binary file."
