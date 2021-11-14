@@ -1,9 +1,9 @@
 [package]
 name = "grep_bin"
-version = "1.0.2"
+version = "1.1.0"
 edition = "2021"
 authors = ["LaBatata101 <labatata101@linuxmail.org>"]
-description = "Searches for a sequence of bytes  or a ASCII string in a binary file."
+description = "Searches recursively a directory or multiple files for a sequence of bytes or ASCII string."
 readme = "README.md"
 license-file = "LICENSE"
 homepage = "https://github.com/LaBatata101/grep_bin"
