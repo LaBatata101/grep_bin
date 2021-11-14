@@ -19,13 +19,14 @@
 
 ### Specify the number of bytes per line in the output
 `$ grep_bin README.md "information" -c 32`
+
 Output:
 <pre>
 README.md
 00000320:  73 20 68 65 6C 70 20 <b>69  6E 66 6F 72 6D 61 74 69  6F 6E</b> 0A 0A 20 20 20 20  2D 56 2C 20 2D 2D 76 65   |s help <b>information</b>..    -V, --ve|
 00000360:  73 69 6F 6E 20 <b>69 6E 66  6F 72 6D 61 74 69 6F 6E</b>  0A 0A 0A 4F 50 54 49 4F  4E 53 3A 0A 20 20 20 20   |sion <b>information</b>...OPTIONS:.    |
 </pre>
-* 
+* the characters in bold represent the colored match
 ### Help
 ```
 $ grep_bin -h
