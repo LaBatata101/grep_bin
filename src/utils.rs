@@ -24,7 +24,7 @@ impl<'a> From<&'a str> for PatternType<'a> {
     }
 }
 
-pub fn print_output(matching_indexes: Vec<Match>) {
+pub fn print_output(matching_indexes: &[Match]) {
     for _match in matching_indexes {
         let colored_offset = Colour::Green.paint(format!("{:08X}", _match.index().start));
 
@@ -44,4 +44,61 @@ pub fn print_output(matching_indexes: Vec<Match>) {
         std::io::stdout().flush().unwrap();
         println!();
     }
+}
+
+pub fn print_hexdump_output(matching_indexes: &[Match], bytes_per_line: usize) {
+    for mtch in matching_indexes {
+        let mut offset = mtch.offset() - (mtch.offset() % bytes_per_line);
+        let mut curr_pos = 0;
+
+        for bytes in mtch.data().chunks(bytes_per_line) {
+            let mut ascii_repr = Vec::new();
+            print!("{}:  ", Colour::Green.paint(format!("{:08X}", offset)));
+
+            for (i, &byte) in bytes.iter().enumerate() {
+
+                if mtch.index().contains(&curr_pos) {
+                    print!("{} ", Colour::Red.bold().paint(format!("{:02X}", byte)));
+                    ascii_repr.push(format!("{}", Colour::Red.bold().paint(to_ascii_repr(byte).to_string())));
+                } else {
+                    print!("{:02X} ", byte);
+                    ascii_repr.push(to_ascii_repr(byte).to_string());
+                }
+
+                if (i + 1) % 8 == 0 {
+                    print!(" ");
+                }
+
+                if i == bytes_per_line - 1 {
+                    print_ascii_repr(&ascii_repr);
+                }
+
+                curr_pos += 1;
+            }
+
+            std::io::stdout().flush().unwrap();
+
+            offset += bytes_per_line;
+        }
+    }
+
+}
+
+fn print_ascii_repr(ascii_repr: &[String]) {
+    print!(" |");
+    for ascii in ascii_repr {
+        print!("{}", ascii);
+    }
+    println!("|");
+}
+
+fn to_ascii_repr(byte: u8) -> char {
+    let ch = byte as char;
+
+    if ch.is_ascii() && !ch.is_ascii_control() {
+        ch
+    } else {
+        '.'
+    }
+
 }
