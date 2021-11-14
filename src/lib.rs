@@ -1,6 +1,4 @@
 use clap::{values_t, App, AppSettings, Arg, ArgMatches};
-use std::fs::File;
-use std::io::BufReader;
 use std::process;
 use std::{env, path::PathBuf};
 
@@ -9,16 +7,13 @@ pub mod utils;
 
 pub use utils::{file, search};
 
-use crate::utils::{print_output, PatternType};
+use crate::utils::{print_hexdump_output, PatternType};
 
 pub fn setup_args<'a>() -> ArgMatches<'a> {
     App::new("grep_bin")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
-        .long_about(
-            "Searches for a sequence of bytes  or a ASCII string in a binary file.
-If a directory is provided grep_bin will search every file in the directory recursively.",
-        )
+        .long_about(clap::crate_description!())
         .arg(
             Arg::with_name("FILE")
                 .index(1)
@@ -49,6 +44,17 @@ All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca",
 Examples of input: jpg, mp3, exe",
                 ),
         )
+        .arg(Arg::with_name("context_bytes_size")
+             .short("c")
+             .default_value("16")
+             .validator(|value| {
+                 match value.parse::<usize>() {
+                     Ok(_) => Ok(()),
+                     Err(_) => Err(String::from("the value needs to be a valid integer")),
+                 }
+                })
+             .long_help("Defines the number of bytes that will be printed in each line.")
+             )
         .settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::ColoredHelp])
         .get_matches()
 }
@@ -72,18 +78,21 @@ pub fn parse_args(args: ArgMatches) {
         }),
     };
 
+    let context_bytes_size: usize = args.value_of("context_bytes_size").unwrap().parse().unwrap();
+
+    let mut searcher = search::Searcher::new(&bytes, context_bytes_size);
+
     for filename in files {
-        let file = File::open(&filename).unwrap_or_else(|error| {
-            eprintln!("{}: {}", filename.to_str().unwrap(), error);
+        let filename = filename.to_str().unwrap();
+
+        searcher.search_in_file(filename).unwrap_or_else(|error| {
+            eprintln!("{}: {}", filename, error);
             process::exit(1);
         });
-        let reader = BufReader::new(file);
 
-        println!("{}", Colour::Purple.paint(filename.to_str().unwrap()));
-        let matches = search::search_in_file(&bytes, reader);
-
-        for _match in matches {
-            print_output(_match);
+        println!("{}", Colour::Purple.paint(filename));
+        for result in searcher.result() {
+            print_hexdump_output(result, searcher.context_bytes_size());
         }
     }
 }
