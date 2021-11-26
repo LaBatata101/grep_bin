@@ -1,87 +1,96 @@
 use ansi_term::Colour;
 use std::io::Write;
 
-use self::search::Match;
+use self::search::Matches;
 
 pub mod file;
 pub mod search;
 
-#[derive(Debug)]
-pub enum PatternType<'a> {
-    Str(&'a str),
-    HexStr(&'a str),
+#[derive(Debug, PartialEq)]
+pub enum PatternType {
+    Str(String),
+    HexStr(String),
 }
 
-impl<'a> From<&'a str> for PatternType<'a> {
+impl<'a> From<&'a str> for PatternType {
     fn from(pattern: &'a str) -> Self {
-        for chr in pattern.chars() {
-            if !chr.is_ascii_hexdigit() {
-                return PatternType::Str(pattern);
-            }
-        }
+        if pattern.starts_with('"') && pattern.ends_with('"') {
+            let quote_striped = strip(pattern, '"');
 
-        PatternType::HexStr(pattern)
+            if quote_striped.starts_with("\\\"") && quote_striped.ends_with("\\\"") {
+                return PatternType::Str(quote_striped.chars().filter(|&c| c != '\\').collect());
+            }
+            PatternType::Str(quote_striped.to_string())
+        } else {
+            PatternType::HexStr(pattern.to_string())
+        }
     }
 }
 
-pub fn print_output(matching_indexes: &[Match]) {
-    for _match in matching_indexes {
-        let colored_offset = Colour::Green.paint(format!("{:08X}", _match.index().start));
-
-        let mut hex_bytes = String::new();
-
-        for byte in _match.data() {
-            hex_bytes.push_str(&format!("{:02X} ", byte));
+fn strip(src: &str, p: char) -> &str {
+    if let Some(prefix_striped) = src.strip_prefix(p) {
+        if let Some(suffix_striped) = prefix_striped.strip_suffix(p) {
+            suffix_striped
+        } else {
+            prefix_striped
         }
-
-        print!(
-            "{}:  {}\t\t\t{}",
-            colored_offset,
-            hex_bytes,
-            _match.data().iter().map(|&c| c as char).collect::<String>()
-        );
-
-        std::io::stdout().flush().unwrap();
-        println!();
+    } else {
+        src
     }
 }
 
-pub fn print_hexdump_output(matching_indexes: &[Match], bytes_per_line: usize) {
-    for mtch in matching_indexes {
-        let mut offset = mtch.offset() - (mtch.offset() % bytes_per_line);
-        let mut curr_pos = 0;
+pub fn print_hexdump_output(matches: &Matches, bytes_per_line: usize) {
+    let mut offset_iter = matches.offset().iter();
+    let mut ascii_repr = Vec::new();
 
-        for bytes in mtch.data().chunks(bytes_per_line) {
-            let mut ascii_repr = Vec::new();
-            print!("{}:  ", Colour::Green.paint(format!("{:08X}", offset)));
+    let mut offset = 0;
 
-            for (i, &byte) in bytes.iter().enumerate() {
+    for (i, &byte) in matches.data().iter().enumerate() {
+        if (i as i64 - bytes_per_line as i64).abs() % bytes_per_line as i64 == 0 {
+            offset = if let Some(&offset) = offset_iter.next() {
+                offset
+            } else {
+                offset + bytes_per_line
+            };
 
-                if mtch.index().contains(&curr_pos) {
-                    print!("{} ", Colour::Red.bold().paint(format!("{:02X}", byte)));
-                    ascii_repr.push(format!("{}", Colour::Red.bold().paint(to_ascii_repr(byte).to_string())));
-                } else {
-                    print!("{:02X} ", byte);
-                    ascii_repr.push(to_ascii_repr(byte).to_string());
-                }
+            print!(
+                "{}:  ",
+                Colour::Green.paint(format!("{:08X}", offset - (offset % bytes_per_line)))
+            );
+        }
 
-                if (i + 1) % 8 == 0 {
-                    print!(" ");
-                }
+        if matches.indexes().iter().any(|indexes| indexes.contains(&i)) {
+            print!("{} ", Colour::Red.bold().paint(format!("{:02X}", byte)));
+            ascii_repr.push(format!(
+                "{}",
+                Colour::Red.bold().paint(to_ascii_repr(byte).to_string())
+            ));
+        } else {
+            print!("{:02X} ", byte);
+            ascii_repr.push(to_ascii_repr(byte).to_string());
+        }
 
-                if i == bytes_per_line - 1 {
-                    print_ascii_repr(&ascii_repr);
-                }
+        if bytes_per_line >= 8 && (i + 1) % 8 == 0 {
+            print!(" ");
+        }
 
-                curr_pos += 1;
-            }
-
-            std::io::stdout().flush().unwrap();
-
-            offset += bytes_per_line;
+        if (i + 1) % bytes_per_line == 0 {
+            print_ascii_repr(&ascii_repr);
+            ascii_repr.clear();
         }
     }
 
+    // fix alignment for ascii column when the data buffer lenght it's not multiple of 16
+    if !ascii_repr.is_empty() {
+        let remaining = bytes_per_line - ascii_repr.len();
+        for _ in 0..remaining {
+            print!("   ");
+        }
+        print!(" ");
+        print_ascii_repr(&ascii_repr);
+    }
+
+    std::io::stdout().flush().unwrap();
 }
 
 fn print_ascii_repr(ascii_repr: &[String]) {
@@ -100,5 +109,41 @@ fn to_ascii_repr(byte: u8) -> char {
     } else {
         '.'
     }
+}
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trim_backslash() {
+        assert_eq!(
+            PatternType::from("\"backslash\""),
+            PatternType::Str("backslash".to_string())
+        )
+    }
+
+    #[test]
+    fn test_trim_backslash_with_quotes() {
+        assert_eq!(
+            PatternType::from("\"\\\"backslash with quote\\\"\""),
+            PatternType::Str("\"backslash with quote\"".to_string())
+        )
+    }
+
+    #[test]
+    fn test_strip() {
+        assert_eq!(
+            strip("\"\"remove only one quote\"\"", '"'),
+            "\"remove only one quote\""
+        )
+    }
+
+    #[test]
+    fn test_is_hex() {
+        assert_eq!(
+            PatternType::from("eeffgg"),
+            PatternType::HexStr("eeffgg".to_string())
+        )
+    }
 }
