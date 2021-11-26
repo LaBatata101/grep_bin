@@ -13,8 +13,8 @@
 
 ### Search for an ASCII string inside the binary
 `$ grep_bin test.bin '"Hello World"'`
-Search for an ASCII string with quotes included
-`$ grep_bin test.bin '"This is a \"quote\""'`
+
+Search for an ASCII string with quotes included: `$ grep_bin test.bin '"This is a \"quote\""'`
 
 ### Search a byte sequence in multiple files
 `$ grep_bin test1.bin test2.bin fFFe`
