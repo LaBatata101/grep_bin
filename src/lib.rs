@@ -30,6 +30,7 @@ pub fn setup_args<'a>() -> ArgMatches<'a> {
                 .long_help(
                     "Can be a ascii string or a byte sequence.
 Ascii strings should be passed inside quotes like so '\"This is a string\"'
+Escaping quotes '\"This is a \\\"quote\\\"\"'
 All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca",
                 ),
         )
