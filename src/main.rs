@@ -1,6 +1,6 @@
-use grep_bin::{parse_args, setup_args};
+use grep_bin::{run, setup_args};
 
 fn main() {
     let args = setup_args();
-    parse_args(args);
+    run(args);
 }

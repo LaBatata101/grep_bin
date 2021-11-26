@@ -3,9 +3,9 @@ use std::process;
 use std::{env, path::PathBuf};
 
 use ansi_term::Colour;
-pub mod utils;
+mod utils;
 
-pub use utils::{file, search};
+use utils::{file, search};
 
 use crate::utils::{print_hexdump_output, PatternType};
 
@@ -59,7 +59,7 @@ Examples of input: jpg, mp3, exe",
         .get_matches()
 }
 
-pub fn parse_args(args: ArgMatches) {
+pub fn run(args: ArgMatches) {
     let filetypes: Vec<&str> = args.values_of("filetype").unwrap_or_default().collect();
 
     let filepaths = values_t!(args, "FILE", PathBuf).unwrap();
@@ -69,7 +69,7 @@ pub fn parse_args(args: ArgMatches) {
         file::filter_filetypes(file::get_all_files_from_paths(filepaths), &filetypes)
     };
 
-    let bytes: Vec<u8> = match PatternType::from(args.value_of("PATTERN").unwrap()) {
+    let pattern: Vec<u8> = match PatternType::from(args.value_of("PATTERN").unwrap()) {
         PatternType::Str(pattern) => pattern.to_owned().into_bytes(),
 
         PatternType::HexStr(pattern) => hex::decode(pattern).unwrap_or_else(|error| {
@@ -80,7 +80,7 @@ pub fn parse_args(args: ArgMatches) {
 
     let context_bytes_size: usize = args.value_of("context_bytes_size").unwrap().parse().unwrap();
 
-    let mut searcher = search::Searcher::new(&bytes, context_bytes_size);
+    let mut searcher = search::Searcher::new(&pattern, context_bytes_size);
 
     for filename in files {
         let filename = filename.to_str().unwrap();
@@ -91,8 +91,6 @@ pub fn parse_args(args: ArgMatches) {
         });
 
         println!("{}", Colour::Purple.paint(filename));
-        for result in searcher.result() {
-            print_hexdump_output(result, searcher.context_bytes_size());
-        }
+        print_hexdump_output(searcher.result(), searcher.context_bytes_size());
     }
 }
