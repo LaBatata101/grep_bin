@@ -70,7 +70,7 @@ pub fn run(args: ArgMatches) {
     };
 
     let pattern: Vec<u8> = match PatternType::from(args.value_of("PATTERN").unwrap()) {
-        PatternType::Str(pattern) => pattern.to_owned().into_bytes(),
+        PatternType::Str(pattern) => pattern.into_bytes(),
 
         PatternType::HexStr(pattern) => hex::decode(pattern).unwrap_or_else(|error| {
             eprintln!("Error: {} in byte sequence!", error);
