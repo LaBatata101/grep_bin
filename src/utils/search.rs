@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::{BufReader, Read};
+use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::ops::Range;
 
 #[derive(Debug, Clone)]
@@ -95,25 +95,27 @@ pub struct Searcher<'a> {
     pattern: &'a [u8],
     matches: Matches,
     context_bytes_size: usize,
+    skip_bytes: u64,
 }
 
 impl<'a> Searcher<'a> {
     const BUFFER_SIZE: usize = 8192;
 
-    pub fn new(pattern: &'a [u8], context_bytes_size: usize) -> Self {
+    pub fn new(pattern: &'a [u8], context_bytes_size: usize, skip_bytes: u64) -> Self {
         Self {
             pattern,
             matches: Matches::new(pattern.len(), context_bytes_size),
             context_bytes_size,
+            skip_bytes,
         }
     }
 
     pub fn search_in_file(&mut self, filepath: &str) -> std::io::Result<()> {
-        let file = File::open(filepath)?;
+        let mut file = File::open(filepath)?;
         let file_size = file.metadata().unwrap().len() as usize;
 
+        let mut pos_in_file = file.seek(SeekFrom::Start(self.skip_bytes)).unwrap_or(0) as usize;
         let mut reader = BufReader::new(file);
-        let mut pos_in_file = 0;
 
         if file_size < self.context_bytes_size {
             self.context_bytes_size = file_size;

@@ -10,6 +10,11 @@ use utils::{file, search};
 use crate::utils::{print_hexdump_output, PatternType};
 
 pub fn setup_args<'a>() -> ArgMatches<'a> {
+    let integer_validator = |value: String| match value.parse::<usize>() {
+        Ok(_) => Ok(()),
+        Err(_) => Err(String::from("the value needs to be a valid integer")),
+    };
+
     App::new("grep_bin")
         .version(clap::crate_version!())
         .author(clap::crate_authors!())
@@ -45,22 +50,27 @@ All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca",
 Examples of input: jpg, mp3, exe",
                 ),
         )
-        .arg(Arg::with_name("context_bytes_size")
-             .short("c")
-             .default_value("16")
-             .validator(|value| {
-                 match value.parse::<usize>() {
-                     Ok(_) => Ok(()),
-                     Err(_) => Err(String::from("the value needs to be a valid integer")),
-                 }
-                })
-             .long_help("Defines the number of bytes that will be printed in each line.")
-             )
+        .arg(
+            Arg::with_name("context_bytes_size")
+                .short("c")
+                .default_value("16")
+                .validator(integer_validator)
+                .long_help("Defines the number of bytes that will be printed in each line."),
+        )
         .arg(
             Arg::with_name("print_only")
                 .short("p")
                 .long("print-only")
                 .help("Prints only the file name that contais the match."),
+        )
+        .arg(
+            Arg::with_name("skip_bytes")
+                .short("s")
+                .long("skip-bytes")
+                .default_value("0")
+                .takes_value(true)
+                .validator(integer_validator)
+                .help("Skip n bytes before searching."),
         )
         .settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::ColoredHelp])
         .get_matches()
@@ -90,6 +100,7 @@ pub fn run(args: ArgMatches) {
         .unwrap()
         .parse()
         .unwrap();
+    let skip_bytes: u64 = args.value_of("skip_bytes").unwrap().parse().unwrap();
 
     for filename in files {
         let mut searcher = search::Searcher::new(&pattern, context_bytes_size, skip_bytes);
