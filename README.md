@@ -33,28 +33,44 @@ README.md
 ```
 $ grep_bin -h
 
-grep_bin 1.1.1
+grep_bin 1.2.0
 LaBatata101 <labatata101@linuxmail.org>
 Searches recursively a directory or multiple files for a sequence of bytes or ASCII string.
 
 USAGE:
-    grep_bin [OPTIONS] <FILE>... <PATTERN>
+    grep_bin [FLAGS] [OPTIONS] <FILE>... <PATTERN>
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+    -h, --help          
+            Prints help information
+
+    -p, --print-only    
+            Prints only the file name that contais the match.
+
+    -V, --version       
+            Prints version information
+
 
 OPTIONS:
-    -c <context_bytes_size>        Defines the number of bytes that will be printed in each line. [default: 16]
-    -f <filetype>...               Filter the search by the file extensions.
-                                   Examples of input: jpg, mp3, exe
+    -c <context_bytes_size>          
+            Defines the number of bytes that will be printed in each line. [default: 16]
+
+    -f <filetype>...                 
+            Filter the search by the file extensions.
+            Examples of input: jpg, mp3, exe
+    -s, --skip-bytes <skip_bytes>    
+            Skip n bytes before searching. [default: 0]
+
 
 ARGS:
-    <FILE>...    The file path
-    <PATTERN>    Can be a ascii string or a byte sequence.
-                 Ascii strings should be passed inside quotes like so '"This is a string"'
-                 Escaping quotes '"This is a \"quote\""'
-                 All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca
+    <FILE>...    
+            The file path
+
+    <PATTERN>    
+            Can be a ascii string or a byte sequence.
+            Ascii strings should be passed inside quotes like so '"This is a string"'
+            Escaping quotes '"This is a \"quote\""'
+            All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca
 ```
 
 # Building Manually
