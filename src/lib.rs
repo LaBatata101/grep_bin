@@ -56,6 +56,12 @@ Examples of input: jpg, mp3, exe",
                 })
              .long_help("Defines the number of bytes that will be printed in each line.")
              )
+        .arg(
+            Arg::with_name("print_only")
+                .short("p")
+                .long("print-only")
+                .help("Prints only the file name that contais the match."),
+        )
         .settings(&[AppSettings::ArgRequiredElseHelp, AppSettings::ColoredHelp])
         .get_matches()
 }
@@ -79,11 +85,14 @@ pub fn run(args: ArgMatches) {
         }),
     };
 
-    let context_bytes_size: usize = args.value_of("context_bytes_size").unwrap().parse().unwrap();
-
-    let mut searcher = search::Searcher::new(&pattern, context_bytes_size);
+    let context_bytes_size: usize = args
+        .value_of("context_bytes_size")
+        .unwrap()
+        .parse()
+        .unwrap();
 
     for filename in files {
+        let mut searcher = search::Searcher::new(&pattern, context_bytes_size, skip_bytes);
         let filename = filename.to_str().unwrap();
 
         searcher.search_in_file(filename).unwrap_or_else(|error| {
@@ -91,7 +100,13 @@ pub fn run(args: ArgMatches) {
             process::exit(1);
         });
 
-        println!("{}", Colour::Purple.paint(filename));
-        print_hexdump_output(searcher.result(), searcher.context_bytes_size());
+        let result = searcher.result();
+        if !result.is_empty() {
+            println!("{}", Colour::Purple.paint(filename));
+        }
+
+        if !args.is_present("print_only") {
+            print_hexdump_output(result, searcher.context_bytes_size());
+        }
     }
 }

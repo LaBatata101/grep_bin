@@ -38,6 +38,10 @@ impl Matches {
         &self.data
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty() && self.indexes.is_empty() && self.indexes.is_empty()
+    }
+
     fn populate_matches(&mut self, index: usize, pos_in_file: usize, buffer: &[u8]) {
         // index where we should start collecting bytes for context
         let offset = index - (index % self.context_bytes_size);
