@@ -1,10 +1,45 @@
 use ansi_term::Colour;
-use std::io::Write;
+use std::{io::Write, ops::Range};
 
 use self::search::Matches;
 
 pub mod file;
 pub mod search;
+
+#[derive(Debug, Clone)]
+pub struct CustomRange {
+    range: Range<usize>,
+}
+
+impl CustomRange {
+    pub fn new(range: Range<usize>) -> Self {
+        Self { range }
+    }
+
+    pub fn range(&self) -> Range<usize> {
+        self.range.clone()
+    }
+}
+
+impl Eq for CustomRange {}
+
+impl PartialEq for CustomRange {
+    fn eq(&self, other: &Self) -> bool {
+        self.range.start == other.range.start && self.range.end == other.range.end
+    }
+}
+
+impl PartialOrd for CustomRange {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CustomRange {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.range.start.cmp(&other.range.start)
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum PatternType {
@@ -40,53 +75,52 @@ fn strip(src: &str, p: char) -> &str {
 }
 
 pub fn print_hexdump_output(matches: &Matches, bytes_per_line: usize) {
-    let mut offset_iter = matches.offset().iter();
     let mut ascii_repr = Vec::new();
 
-    let mut offset = 0;
+    for range in matches.context_bytes_indexes() {
+        let offset = range.range().start;
+        print!(
+            "{}:  ",
+            Colour::Green.paint(format!("{:08X}", offset - (offset % bytes_per_line)))
+        );
+        for i in range.range() {
+            let byte = matches.get_data(i % matches.data_len());
 
-    for (i, &byte) in matches.data().iter().enumerate() {
-        if (i as i64 - bytes_per_line as i64).abs() % bytes_per_line as i64 == 0 {
-            offset = if let Some(&offset) = offset_iter.next() {
-                offset
+            if matches.indexes().contains(&i) {
+                print!("{} ", Colour::Red.bold().paint(format!("{:02X}", byte)));
+                ascii_repr.push(format!(
+                    "{}",
+                    Colour::Red.bold().paint(to_ascii_repr(byte).to_string())
+                ));
             } else {
-                offset + bytes_per_line
-            };
+                print!("{:02X} ", byte);
+                ascii_repr.push(to_ascii_repr(byte).to_string());
+            }
 
-            print!(
-                "{}:  ",
-                Colour::Green.paint(format!("{:08X}", offset - (offset % bytes_per_line)))
-            );
-        }
+            if bytes_per_line >= 8 && (i + 1) % 8 == 0 {
+                print!(" ");
+            }
 
-        if matches.indexes().iter().any(|indexes| indexes.contains(&i)) {
-            print!("{} ", Colour::Red.bold().paint(format!("{:02X}", byte)));
-            ascii_repr.push(format!(
-                "{}",
-                Colour::Red.bold().paint(to_ascii_repr(byte).to_string())
-            ));
-        } else {
-            print!("{:02X} ", byte);
-            ascii_repr.push(to_ascii_repr(byte).to_string());
-        }
-
-        if bytes_per_line >= 8 && (i + 1) % 8 == 0 {
-            print!(" ");
-        }
-
-        if (i + 1) % bytes_per_line == 0 {
-            print_ascii_repr(&ascii_repr);
-            ascii_repr.clear();
+            if (i + 1) % bytes_per_line == 0 {
+                print_ascii_repr(&ascii_repr);
+                ascii_repr.clear();
+            }
         }
     }
 
-    // fix alignment for ascii column when the data buffer lenght it's not multiple of 16
+    // fix ascii column alignment
     if !ascii_repr.is_empty() {
-        let remaining = bytes_per_line - ascii_repr.len();
-        for _ in 0..remaining {
-            print!("   ");
+        let total_chars_in_line = bytes_per_line * 3 + 2;
+        let total_chars_bytes_printed = if ascii_repr.len() > 8 {
+            ascii_repr.len() * 3 + 1
+        } else {
+            ascii_repr.len() * 3
+        };
+        let total_spaces_to_print = total_chars_in_line - total_chars_bytes_printed;
+
+        for _ in 0..total_spaces_to_print {
+            print!(" ");
         }
-        print!(" ");
         print_ascii_repr(&ascii_repr);
     }
 
@@ -94,7 +128,7 @@ pub fn print_hexdump_output(matches: &Matches, bytes_per_line: usize) {
 }
 
 fn print_ascii_repr(ascii_repr: &[String]) {
-    print!(" |");
+    print!("|");
     for ascii in ascii_repr {
         print!("{}", ascii);
     }
