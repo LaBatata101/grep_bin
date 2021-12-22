@@ -33,7 +33,6 @@ README.md
 ```
 $ grep_bin -h
 
-grep_bin 1.2.0
 LaBatata101 <labatata101@linuxmail.org>
 Searches recursively a directory or multiple files for a sequence of bytes or ASCII string.
 
