@@ -1,132 +1,89 @@
-use std::collections::BTreeSet;
-use std::fs::File;
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::collections::BTreeMap;
+use std::ops::Range;
 
-use super::CustomRange;
+
+use super::file::read_file_and;
 
 #[derive(Debug, Clone)]
-pub struct Matches {
-    indexes: Vec<usize>,
-    context_bytes_indexes: BTreeSet<CustomRange>,
-    data: Vec<u8>,
-    context_bytes_size: usize,
-}
-
-impl Matches {
-    pub fn new(context_bytes_size: usize) -> Self {
-        Self {
-            context_bytes_size,
-            indexes: Vec::new(),
-            context_bytes_indexes: BTreeSet::new(),
-            data: Vec::new(),
-        }
-    }
-
-    pub fn context_bytes_indexes(&self) -> &BTreeSet<CustomRange> {
-        &self.context_bytes_indexes
-    }
-
-    /// Get a reference to the match's index.
-    pub fn indexes(&self) -> &[usize] {
-        &self.indexes
-    }
-
-    /// Get a reference to the match's data.
-    pub fn get_data(&self, index: usize) -> u8 {
-        *self.data.get(index).unwrap()
-    }
-
-    pub fn data_len(&self) -> usize {
-        self.data.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.data.is_empty() && self.indexes.is_empty() && self.indexes.is_empty()
-    }
-
-    fn populate_matches(&mut self, indexes: &[usize], buffer: &[u8]) {
-        for index in indexes {
-            // index where we should start collecting bytes for context
-            let offset = index - (index % self.context_bytes_size);
-
-            // Creates the index range for the context bytes.
-            let context_bytes_indexes = if offset + self.context_bytes_size <= buffer.len() {
-                CustomRange::new(offset..offset + self.context_bytes_size)
-            } else {
-                CustomRange::new(offset..buffer.len())
-            };
-
-            let bytes = &buffer[context_bytes_indexes.range.start..context_bytes_indexes.range.end];
-            if self.context_bytes_indexes.insert(context_bytes_indexes) {
-                // The actual bytes for context + the matching bytes
-                // needed for printing the result
-                self.data.extend_from_slice(bytes);
-            }
-        }
-
-        self.indexes.extend_from_slice(indexes);
-    }
+pub struct Match {
+    pub offset: usize,
+    pub indexes_to_paint: Vec<Range<usize>>,
+    pub bytes: Vec<u8>,
 }
 
 pub struct Searcher<'a> {
     pattern: &'a [u8],
-    matches: Matches,
     context_bytes_size: usize,
     skip_bytes: u64,
 }
 
 impl<'a> Searcher<'a> {
-    const BUFFER_SIZE: usize = 8192;
-
     pub fn new(pattern: &'a [u8], context_bytes_size: usize, skip_bytes: u64) -> Self {
         Self {
             pattern,
-            matches: Matches::new(context_bytes_size),
             context_bytes_size,
             skip_bytes,
         }
     }
 
-    pub fn search_in_file(&mut self, filepath: &str) -> std::io::Result<()> {
-        let mut file = File::open(filepath)?;
-        let file_size = file.metadata().unwrap().len() as usize;
 
-        let _pos_in_file = file.seek(SeekFrom::Start(self.skip_bytes)).unwrap_or(0) as usize;
-        let mut reader = BufReader::new(file);
 
-        if file_size < self.context_bytes_size {
-            self.context_bytes_size = file_size;
+    pub fn search_in_file(&mut self, filepath: &str) -> std::io::Result<Vec<Match>> {
+        let mut matches = Vec::new();
+        read_file_and(filepath, self.skip_bytes, |buffer, pos_in_file| {
+            matches.extend_from_slice(&self.search(buffer, pos_in_file));
+        })?;
+
+        Ok(matches)
+    }
+
+    fn search(&self, buffer: &[u8], pos_in_file: usize) -> Vec<Match> {
+        let match_indexes = Self::search_slice(buffer, self.pattern);
+
+        if match_indexes.is_empty() {
+            return Vec::new();
         }
 
-        if file_size <= Self::BUFFER_SIZE {
-            let mut buffer = Vec::with_capacity(Self::BUFFER_SIZE);
-            reader.read_to_end(&mut buffer)?;
+        let mut offset_indexes: BTreeMap<usize, Vec<Range<usize>>> = BTreeMap::new();
 
-            let result = Self::search_slice(&buffer, self.pattern);
-            self.matches.populate_matches(&result, &buffer);
-        } else {
-            let mut buffer = [0; Self::BUFFER_SIZE];
-            loop {
-                let n = reader.read(&mut buffer).unwrap();
+        for index in match_indexes {
+            let offset = index.start - (index.start % self.context_bytes_size);
+            let indexes = offset_indexes.entry(offset).or_insert(Vec::new());
 
-                if n == 0 {
-                    break;
-                }
+            if index.end - offset > self.context_bytes_size {
+                indexes.push(index.start - offset..self.context_bytes_size);
 
-                let result = Self::search_slice(&buffer, self.pattern);
-                self.matches.populate_matches(&result, &buffer);
+                let new_offset = offset + self.context_bytes_size;
 
-                // pos_in_file += Self::BUFFER_SIZE;
+                let indexes = offset_indexes.entry(new_offset).or_insert(Vec::new());
+                indexes.push(0..index.end - new_offset);
+            } else {
+                indexes.push(index.start - offset..index.end - offset);
             }
         }
 
-        Ok(())
+        offset_indexes
+            .iter()
+            .map(|(&offset, indexes)| {
+                let bytes = if offset + self.context_bytes_size <= buffer.len() {
+                    buffer[offset..offset + self.context_bytes_size].to_vec()
+                } else {
+                    buffer[offset..].to_vec()
+                };
+
+                Match {
+                    offset: offset + pos_in_file,
+                    indexes_to_paint: indexes.clone(),
+                    bytes,
+                }
+            })
+            .collect()
     }
 
     /// Uses the KMP algorithm to search
     /// Returns a vector of indexes where the slice pattern starts
-    pub fn search_slice(src: &[u8], slice: &[u8]) -> Vec<usize> {
-        let mut match_indexes: Vec<usize> = Vec::new();
+    pub fn search_slice(src: &[u8], slice: &[u8]) -> Vec<Range<usize>> {
+        let mut match_indexes = Vec::new();
 
         let mut curr_pos_pattern: usize = 0;
         let table_of_ocurrencies = Self::compute_toc(slice);
@@ -139,8 +96,7 @@ impl<'a> Searcher<'a> {
             if slice[curr_pos_pattern] == ch {
                 if curr_pos_pattern == slice.len() - 1 {
                     let pos = i - curr_pos_pattern;
-                    match_indexes
-                        .extend_from_slice(&(pos..pos + slice.len()).collect::<Vec<usize>>());
+                    match_indexes.push(pos..pos + slice.len());
                     curr_pos_pattern = table_of_ocurrencies[curr_pos_pattern];
                 } else {
                     curr_pos_pattern += 1;
@@ -167,16 +123,6 @@ impl<'a> Searcher<'a> {
         }
 
         table_of_ocurrencies
-    }
-
-    /// Get a reference to the searcher's result.
-    pub fn result(&self) -> &Matches {
-        &self.matches
-    }
-
-    /// Return the context bytes size.
-    pub fn context_bytes_size(&self) -> usize {
-        self.context_bytes_size
     }
 }
 
