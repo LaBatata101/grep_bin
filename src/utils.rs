@@ -1,45 +1,10 @@
 use ansi_term::Colour;
 use std::{io::Write, ops::Range};
 
-use self::search::Matches;
+use self::search::Match;
 
 pub mod file;
 pub mod search;
-
-#[derive(Debug, Clone)]
-pub struct CustomRange {
-    range: Range<usize>,
-}
-
-impl CustomRange {
-    pub fn new(range: Range<usize>) -> Self {
-        Self { range }
-    }
-
-    pub fn range(&self) -> Range<usize> {
-        self.range.clone()
-    }
-}
-
-impl Eq for CustomRange {}
-
-impl PartialEq for CustomRange {
-    fn eq(&self, other: &Self) -> bool {
-        self.range.start == other.range.start && self.range.end == other.range.end
-    }
-}
-
-impl PartialOrd for CustomRange {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for CustomRange {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.range.start.cmp(&other.range.start)
-    }
-}
 
 #[derive(Debug, PartialEq)]
 pub enum PatternType {
@@ -74,75 +39,66 @@ fn strip(src: &str, p: char) -> &str {
     }
 }
 
-pub fn print_hexdump_output(matches: &Matches, bytes_per_line: usize) {
-    let mut ascii_repr = Vec::new();
+pub fn print_hexdump_output(matches: &[Match], context_bytes_size: usize) {
+    for _match in matches {
+        print!("{}:  ", Colour::Green.paint(format!("{:08X}", _match.offset)));
 
-    for range in matches.context_bytes_indexes() {
-        let offset = range.range().start;
-        print!(
-            "{}:  ",
-            Colour::Green.paint(format!("{:08X}", offset - (offset % bytes_per_line)))
-        );
-        for i in range.range() {
-            let byte = matches.get_data(i % matches.data_len());
+        print_bytes_as_hex_char_colored(&_match.bytes, &_match.indexes_to_paint, Colour::Red, context_bytes_size);
 
-            if matches.indexes().contains(&i) {
-                print!("{} ", Colour::Red.bold().paint(format!("{:02X}", byte)));
-                ascii_repr.push(format!(
-                    "{}",
-                    Colour::Red.bold().paint(to_ascii_repr(byte).to_string())
-                ));
-            } else {
-                print!("{:02X} ", byte);
-                ascii_repr.push(to_ascii_repr(byte).to_string());
-            }
+        let total_bytes_to_print = _match.bytes.len();
 
-            if bytes_per_line >= 8 && (i + 1) % 8 == 0 {
+        // When we have two matches (each match is one line that is going to be printed) and one of these matches
+        // total_bytes_to_print is less than context_bytes_size we need to fill with empty spaces to align the
+        // ascii column with the ascii column from the previous printed line.
+        if matches.len() >= 2 && total_bytes_to_print < context_bytes_size {
+            let total_chars_in_line = context_bytes_size * 3 + 2;
+            let total_spaces_to_print = total_chars_in_line - total_bytes_to_print * 3;
+
+            for _ in 0..total_spaces_to_print {
                 print!(" ");
             }
-
-            if (i + 1) % bytes_per_line == 0 {
-                print_ascii_repr(&ascii_repr);
-                ascii_repr.clear();
-            }
         }
+
+        let colored_ascii_repr = bytes_to_ascii_colored_repr(&_match.bytes, &_match.indexes_to_paint, Colour::Red);
+        println!("|{colored_ascii_repr}|");
     }
-
-    // fix ascii column alignment
-    if !ascii_repr.is_empty() {
-        let total_chars_in_line = bytes_per_line * 3 + 2;
-        let total_chars_bytes_printed = if ascii_repr.len() > 8 {
-            ascii_repr.len() * 3 + 1
-        } else {
-            ascii_repr.len() * 3
-        };
-        let total_spaces_to_print = total_chars_in_line - total_chars_bytes_printed;
-
-        for _ in 0..total_spaces_to_print {
-            print!(" ");
-        }
-        print_ascii_repr(&ascii_repr);
-    }
-
     std::io::stdout().flush().unwrap();
 }
 
-fn print_ascii_repr(ascii_repr: &[String]) {
-    print!("|");
-    for ascii in ascii_repr {
-        print!("{}", ascii);
+fn print_bytes_as_hex_char_colored(bytes: &[u8], indexes_to_paint: &[Range<usize>], color: Colour, blocks_size: usize) {
+    for (i, byte) in bytes.iter().enumerate() {
+        if indexes_to_paint.iter().any(|range| range.contains(&i)) {
+            print!("{} ", color.bold().paint(format!("{:02X}", byte)));
+        } else {
+            print!("{:02X} ", byte);
+        }
+
+        if blocks_size >= 8 && (i + 1) % 8 == 0 {
+            print!(" ");
+        }
     }
-    println!("|");
 }
 
-fn to_ascii_repr(byte: u8) -> char {
-    let ch = byte as char;
-
-    if ch.is_ascii() && !ch.is_ascii_control() {
-        ch
-    } else {
-        '.'
-    }
+fn bytes_to_ascii_colored_repr(bytes: &[u8], indexes_to_paint: &[Range<usize>], color: Colour) -> String {
+    bytes
+        .iter()
+        .enumerate()
+        .map(|(i, &byte)| {
+            let ch = byte as char;
+            // NOTE: Trye to find a better way of doing this
+            if indexes_to_paint.iter().any(|range| range.contains(&i)) {
+                if ch.is_ascii() && !ch.is_ascii_control() {
+                    color.bold().paint(ch.to_string()).to_string()
+                } else {
+                    color.bold().paint(".").to_string()
+                }
+            } else if ch.is_ascii() && !ch.is_ascii_control() {
+                ch.to_string()
+            } else {
+                String::from(".")
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -167,17 +123,11 @@ mod tests {
 
     #[test]
     fn test_strip() {
-        assert_eq!(
-            strip("\"\"remove only one quote\"\"", '"'),
-            "\"remove only one quote\""
-        )
+        assert_eq!(strip("\"\"remove only one quote\"\"", '"'), "\"remove only one quote\"")
     }
 
     #[test]
     fn test_is_hex() {
-        assert_eq!(
-            PatternType::from("eeffgg"),
-            PatternType::HexStr("eeffgg".to_string())
-        )
+        assert_eq!(PatternType::from("eeffgg"), PatternType::HexStr("eeffgg".to_string()))
     }
 }
