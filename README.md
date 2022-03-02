@@ -3,24 +3,24 @@
 
 ## Usage
 ### Searching for a byte sequence in a file
-`$ grep_bin test.bin fffe`
+`$ grep_bin fffe test.bin`
 
 ### Searching recursively a directory for a byte sequence
-`$ grep_bin ~/Downloads FFFE`
+`$ grep_bin FFFE ~/Downloads`
 
 ### Filtering the filetypes
-`$ grep_bin ~/Downloads FFfe0000 -f mp3 `
+`$ grep_bin -f mp3 FFfe0000 ~/Downloads`
 
 ### Search for an ASCII string inside the binary
-`$ grep_bin test.bin '"Hello World"'`
+`$ grep_bin '"Hello World"' test.bin`
 
-Search for an ASCII string with quotes included: `$ grep_bin test.bin '"This is a \"quote\""'`
+Search for an ASCII string with quotes included: `$ grep_bin '"This is a \"quote\""' test.bin`
 
 ### Search a byte sequence in multiple files
-`$ grep_bin test1.bin test2.bin fFFe`
+`$ grep_bin fFFe test1.bin test2.bin`
 
 ### Specify the number of bytes per line in the output
-`$ grep_bin README.md "information" -c 32`
+`$ grep_bin -c 32 "information" README.md`
 
 Output:
 <pre>
@@ -33,43 +33,29 @@ README.md
 ```
 $ grep_bin -h
 
+grep_bin 2.0.0
 LaBatata101 <labatata101@linuxmail.org>
 Searches recursively a directory or multiple files for a sequence of bytes or ASCII string.
 
 USAGE:
-    grep_bin [FLAGS] [OPTIONS] <FILE>... <PATTERN>
-
-FLAGS:
-    -h, --help          
-            Prints help information
-
-    -p, --print-only    
-            Prints only the file name that contais the match.
-
-    -V, --version       
-            Prints version information
-
-
-OPTIONS:
-    -c <context_bytes_size>          
-            Defines the number of bytes that will be printed in each line. [default: 16]
-
-    -f <filetype>...                 
-            Filter the search by the file extensions.
-            Examples of input: jpg, mp3, exe
-    -s, --skip-bytes <skip_bytes>    
-            Skip n bytes before searching. [default: 0]
-
+    grep_bin [OPTIONS] <PATTERN> <FILE>...
 
 ARGS:
-    <FILE>...    
-            The file path
+    <PATTERN>    Ascii strings should be passed inside quotes like so '"This is a string"'
+                 Escaping quotes '"This is a \"quoted string\""'
+                 All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca
+    <FILE>...    The filepath
 
-    <PATTERN>    
-            Can be a ascii string or a byte sequence.
-            Ascii strings should be passed inside quotes like so '"This is a string"'
-            Escaping quotes '"This is a \"quote\""'
-            All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca
+OPTIONS:
+    -c <context_bytes_size>        Defines the number of bytes that will be printed in each line.
+                                   [default: 16]
+    -f <filetype>                  Filter the search by the file extensions.
+                                   Examples of input: jpg, mp3, exe
+    -h, --help                     Print help information
+    -o, --print-offset             Prints only the offsets of the match.
+    -p, --print-only               Prints only the filename that contais the match.
+    -s, --skip-bytes <n>           Skip n bytes before searching. [default: 0]
+    -V, --version                  Print version information
 ```
 
 # Building Manually
