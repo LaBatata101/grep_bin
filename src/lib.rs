@@ -17,10 +17,12 @@ pub fn setup_args() -> ArgMatches {
 
     command!()
         .arg(
-Ascii strings should be passed inside quotes like so '\"This is a string\"'
+            arg!(<PATTERN> "Ascii strings should be passed inside quotes like so '\"This is a string\"'
 Escaping quotes '\"This is a \\\"quoted string\\\"\"'
-All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca")
+All of these byte sequence are valid: f9b4ca, F9B4CA and f9B4Ca"
+            ),
         )
+        .arg(arg!(<FILE> ... "The filepath"))
         .arg(
             arg!(-f <filetype> ... "Filter the search by the file extensions.
 Examples of input: jpg, mp3, exe")
@@ -72,29 +74,32 @@ pub fn run(args: ArgMatches) {
         }),
     };
 
-    let context_bytes_size: usize = args
-        .value_of("context_bytes_size")
-        .unwrap()
-        .parse()
-        .unwrap();
+    let context_bytes_size: usize = args.value_of("context_bytes_size").unwrap().parse().unwrap();
     let skip_bytes: u64 = args.value_of("skip_bytes").unwrap().parse().unwrap();
 
     for filename in files {
         let mut searcher = search::Searcher::new(&pattern, context_bytes_size, skip_bytes);
         let filename = filename.to_str().unwrap();
 
-        searcher.search_in_file(filename).unwrap_or_else(|error| {
+        let result = searcher.search_in_file(filename).unwrap_or_else(|error| {
             eprintln!("{}: {}", filename, error);
             process::exit(1);
         });
 
-        let result = searcher.result();
         if !result.is_empty() {
             println!("{}", Colour::Purple.paint(filename));
         }
 
+        if args.is_present("print_offset") {
+            result
+                .iter()
+                .map(|_match| _match.offset)
+                .for_each(|offset| println!("0x{:08X}", offset));
+            return;
+        }
+
         if !args.is_present("print_only") {
-            print_hexdump_output(result, searcher.context_bytes_size());
+            print_hexdump_output(&result, context_bytes_size);
         }
     }
 }

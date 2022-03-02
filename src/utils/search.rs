@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-
 use super::file::read_file_and;
 
 #[derive(Debug, Clone)]
@@ -25,8 +24,6 @@ impl<'a> Searcher<'a> {
             skip_bytes,
         }
     }
-
-
 
     pub fn search_in_file(&mut self, filepath: &str) -> std::io::Result<Vec<Match>> {
         let mut matches = Vec::new();
