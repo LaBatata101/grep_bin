@@ -17,6 +17,5 @@ hex = "0.4.3"
 ansi_term = "0.12.1"
 
 [profile.release]
-strip = "symbols"
 codegen-units = 1
 lto = true
