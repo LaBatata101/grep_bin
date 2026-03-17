@@ -61,7 +61,15 @@ pub fn get_all_files_from_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
 pub fn filter_filetypes(files: Vec<PathBuf>, filetypes: &[&str]) -> Vec<PathBuf> {
     files
         .into_iter()
-        .filter(|path| filetypes.contains(&path.extension().unwrap_or_default().to_str().unwrap_or_default()))
+        .filter(|path| {
+            filetypes.contains(
+                &path
+                    .extension()
+                    .unwrap_or_default()
+                    .to_str()
+                    .unwrap_or_default(),
+            )
+        })
         .collect()
 }
 
