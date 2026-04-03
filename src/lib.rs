@@ -82,8 +82,10 @@ pub fn run(args: ArgMatches) {
         let filename = filename.to_str().unwrap();
 
         let result = searcher.search_in_file(filename).unwrap_or_else(|error| {
-            eprintln!("{}: {}", filename, error);
-            process::exit(1);
+            if error.kind() != std::io::ErrorKind::NotFound {
+                eprintln!("{}: {}", filename, error);
+            }
+            Vec::new()
         });
 
         if !result.is_empty() {
